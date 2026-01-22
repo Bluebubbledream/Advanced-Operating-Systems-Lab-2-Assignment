@@ -1,0 +1,11 @@
+{
+  "modelVersion": "6.0.2",
+  "license": "Apache-2.0",
+  "devDependencies": {},
+  "ohos": {
+    "apiVersion": 6
+  },
+  "dependencies": {
+
+  }
+}
