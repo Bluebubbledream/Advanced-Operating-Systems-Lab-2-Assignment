@@ -1,0 +1,87 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "deviceTypes": ["phone", "tablet", "2in1"],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+
+//  "requestPermissions": [
+//    {
+//      "name": "ohos.permission.GET_INSTALLED_BUNDLE_LIST",
+//      "reason": "$string:permission_get_bundle_info",
+//      "usedScene": { "when": "inuse" }
+//    },{
+//      "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+//      "reason": "$string:permission_get_bundle_info",
+//      "usedScene": { "when": "inuse" }
+//    },
+//
+//  ],
+
+//    "requestPermissions": [
+//      {
+//        "name": "ohos.permission.CAMERA",
+//        "reason": "$string:permission_get_bundle_info",
+//        "usedScene": {
+//          "abilities": ["EntryAbility"],
+//          "when": "inuse"
+//        }
+//      },
+//      {
+//        "name": "ohos.permission.READ_WRITE_DOCUMENTS_DIRECTORY",
+//        "reason": "$string:permission_get_bundle_info",
+//        "usedScene": {
+//          "abilities": ["EntryAbility"],
+//          "when": "always"
+//        }
+//      },
+//      {
+//        "name": "ohos.permission.FILE_GUARD_FILE_WRITE",
+//        "reason": "$string:permission_get_bundle_info",
+//        "usedScene": {
+//          "abilities": ["EntryAbility"],
+//          "when": "always"
+//        }
+//      },  {
+//        "name": "ohos.permission.RUNNING_LOCK",  // 保持后台运行
+//        "reason": "$string:perm_reason"
+//      },
+//      {
+//        "name": "ohos.permission.DISTRIBUTED_DATASYNC",  // 跨设备数据同步
+//        "reason": "$string:perm_reason",
+//        "usedScene": {
+//          "abilities": ["EntryAbility"],
+//          "when": "always"
+//        }
+//      }
+//    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:layered_image",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "process": ":launcher",  // 专用进程标识
+        "permissions": [
+//          "ohos.permission.GET_INSTALLED_BUNDLE_LIST",
+//          "ohos.permission.DISTRIBUTED_DATASYNC",
+//          "ohos.permission.READ_WRITE_DOCUMENTS_DIRECTORY",
+//          "ohos.permission.RUNNING_LOCK",
+//          "ohos.permission.CLEAN_BACKGROUND_PROCESSES"
+        ],
+        "skills": [
+          {
+            "entities": ["entity.system.home"],
+            "actions": ["action.system.home"]
+          }
+        ]
+      }
+    ]
+  }
+}

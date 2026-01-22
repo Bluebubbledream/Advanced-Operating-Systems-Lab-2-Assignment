@@ -1,0 +1,544 @@
+Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚ@×if (!("finalizeConstruction" in ViewPU.prototype)) {
+    Reflect.set(ViewPU.prototype, "finalizeConstruction", () => { });
+}
+import DockBar from './DockBar';
+import promptAction from '@ohos.promptAction';
+class LauncherDesktop extends ViewPU {
+    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
+        super(parent, __localStorage, elmtId, extraInfo);
+        if (typeof paramsLambda === "function") {
+            this.paramsGenerator_ = paramsLambda;
+        }
+        this.__onlineDevices = new ObservedPropertyObjectPU([
+            { deviceId: 'local_device_01', deviceName: 'æµ‹è¯•', deviceType: 'Laptop' }
+        ], this, "onlineDevices");
+        this.__searchKeyword = new ObservedPropertySimplePU('', this, "searchKeyword");
+        this.__searchResults = new ObservedPropertyObjectPU([], this, "searchResults");
+        this.__isSearching = new ObservedPropertySimplePU(false, this, "isSearching");
+        this.context = getContext(this);
+        this.dockBar = null;
+        this.setInitiallyProvidedValue(params);
+        this.finalizeConstruction();
+    }
+    setInitiallyProvidedValue(params) {
+        if (params.onlineDevices !== undefined) {
+            this.onlineDevices = params.onlineDevices;
+        }
+        if (params.searchKeyword !== undefined) {
+            this.searchKeyword = params.searchKeyword;
+        }
+        if (params.searchResults !== undefined) {
+            this.searchResults = params.searchResults;
+        }
+        if (params.isSearching !== undefined) {
+            this.isSearching = params.isSearching;
+        }
+        if (params.context !== undefined) {
+            this.context = params.context;
+        }
+        if (params.dockBar !== undefined) {
+            this.dockBar = params.dockBar;
+        }
+    }
+    updateStateVars(params) {
+    }
+    purgeVariableDependenciesOnElmtId(rmElmtId) {
+        this.__onlineDevices.purgeDependencyOnElmtId(rmElmtId);
+        this.__searchKeyword.purgeDependencyOnElmtId(rmElmtId);
+        this.__searchResults.purgeDependencyOnElmtId(rmElmtId);
+        this.__isSearching.purgeDependencyOnElmtId(rmElmtId);
+    }
+    aboutToBeDeleted() {
+        this.__onlineDevices.aboutToBeDeleted();
+        this.__searchKeyword.aboutToBeDeleted();
+        this.__searchResults.aboutToBeDeleted();
+        this.__isSearching.aboutToBeDeleted();
+        SubscriberManager.Get().delete(this.id__());
+        this.aboutToBeDeletedInternal();
+    }
+    get onlineDevices() {
+        return this.__onlineDevices.get();
+    }
+    set onlineDevices(newValue) {
+        this.__onlineDevices.set(newValue);
+    }
+    get searchKeyword() {
+        return this.__searchKeyword.get();
+    }
+    set searchKeyword(newValue) {
+        this.__searchKeyword.set(newValue);
+    }
+    get searchResults() {
+        return this.__searchResults.get();
+    }
+    set searchResults(newValue) {
+        this.__searchResults.set(newValue);
+    }
+    get isSearching() {
+        return this.__isSearching.get();
+    }
+    set isSearching(newValue) {
+        this.__isSearching.set(newValue);
+    }
+    initialRender() {
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create({ space: 15 });
+            Column.width('100%');
+            Column.height('100%');
+            Column.padding({ top: 20 });
+            Column.backgroundColor('#f5f7fa');
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // æ›¿æ¢suffixä¸ºRowå¸ƒå±€
+            // æœç´¢æ  + æœç´¢æŒ‰é’® ç»„åˆå¸ƒå±€
+            Row.create({ space: 10 });
+            // æ›¿æ¢suffixä¸ºRowå¸ƒå±€
+            // æœç´¢æ  + æœç´¢æŒ‰é’® ç»„åˆå¸ƒå±€
+            Row.width('92%');
+            // æ›¿æ¢suffixä¸ºRowå¸ƒå±€
+            // æœç´¢æ  + æœç´¢æŒ‰é’® ç»„åˆå¸ƒå±€
+            Row.alignItems(VerticalAlign.Center);
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            TextInput.create({ placeholder: 'ğŸ” æœç´¢åº”ç”¨/æ–‡ä»¶/äº’è”è®¾å¤‡' });
+            TextInput.flexGrow(1);
+            TextInput.height(48);
+            TextInput.backgroundColor('#f0f2f5');
+            TextInput.borderRadius(24);
+            TextInput.padding({ left: 20, right: 20 });
+            TextInput.fontSize(16);
+            TextInput.onChange((value) => {
+                this.searchKeyword = value.trim();
+                if (!this.searchKeyword) {
+                    this.searchResults = [];
+                }
+            });
+            TextInput.onSubmit(async () => {
+                await this.handleSearch();
+            });
+        }, TextInput);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.createWithLabel('æœç´¢');
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.width(60);
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.height(32);
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.backgroundColor('#007dff');
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.borderRadius(16);
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.fontColor('#fff');
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.fontSize(14);
+            // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+            Button.onClick(async () => {
+                await this.handleSearch();
+            });
+        }, Button);
+        // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+        Button.pop();
+        // æ›¿æ¢suffixä¸ºRowå¸ƒå±€
+        // æœç´¢æ  + æœç´¢æŒ‰é’® ç»„åˆå¸ƒå±€
+        Row.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            If.create();
+            // è®¾å¤‡æç¤ºï¼ˆé€»è¾‘ä¸å˜ï¼‰
+            if (this.onlineDevices.length > 0) {
+                this.ifElseBranchUpdateFunction(0, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create(`ğŸ“± å·²å‘ç° ${this.onlineDevices.length} å°åˆ†å¸ƒå¼è®¾å¤‡`);
+                        Text.fontSize(15);
+                        Text.fontColor('#007dff');
+                        Text.margin({ top: 10 });
+                        Text.textAlign(TextAlign.Center);
+                    }, Text);
+                    Text.pop();
+                });
+            }
+            // æœç´¢ç»“æœåŒºåŸŸ
+            else {
+                this.ifElseBranchUpdateFunction(1, () => {
+                });
+            }
+        }, If);
+        If.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            If.create();
+            // æœç´¢ç»“æœåŒºåŸŸ
+            if (this.isSearching) {
+                this.ifElseBranchUpdateFunction(0, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create('ğŸ” æ­£åœ¨æœç´¢...');
+                        Text.fontSize(16);
+                        Text.fontColor('#666');
+                        Text.margin({ top: 20 });
+                        Text.textAlign(TextAlign.Center);
+                    }, Text);
+                    Text.pop();
+                });
+            }
+            else if (this.searchKeyword && this.searchResults.length > 0) {
+                this.ifElseBranchUpdateFunction(1, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        List.create();
+                        List.width('92%');
+                        List.height('auto');
+                        List.flexGrow(1);
+                        List.margin({ top: 10 });
+                    }, List);
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        ForEach.create();
+                        const forEachItemGenFunction = _item => {
+                            const item = _item;
+                            {
+                                const itemCreation = (elmtId, isInitialRender) => {
+                                    ViewStackProcessor.StartGetAccessRecordingFor(elmtId);
+                                    ListItem.create(deepRenderFunction, true);
+                                    if (!isInitialRender) {
+                                        ListItem.pop();
+                                    }
+                                    ViewStackProcessor.StopGetAccessRecording();
+                                };
+                                const itemCreation2 = (elmtId, isInitialRender) => {
+                                    ListItem.create(deepRenderFunction, true);
+                                };
+                                const deepRenderFunction = (elmtId, isInitialRender) => {
+                                    itemCreation(elmtId, isInitialRender);
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Row.create({ space: 10 });
+                                        Row.padding({ left: 15, right: 15, top: 10, bottom: 10 });
+                                        Row.backgroundColor('#fff');
+                                        Row.borderRadius(12);
+                                        Row.margin({ bottom: 8 });
+                                    }, Row);
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Text.create('ğŸ“±');
+                                        Text.fontSize(20);
+                                    }, Text);
+                                    Text.pop();
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Column.create({ space: 4 });
+                                        Column.flexGrow(1);
+                                    }, Column);
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Text.create(item.name);
+                                        Text.fontSize(16);
+                                        Text.fontColor('#333');
+                                    }, Text);
+                                    Text.pop();
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Text.create(`åŒ…åï¼š${item.bundle}`);
+                                        Text.fontSize(12);
+                                        Text.fontColor('#999');
+                                    }, Text);
+                                    Text.pop();
+                                    Column.pop();
+                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                        Button.createWithLabel('å¯åŠ¨');
+                                        Button.width(60);
+                                        Button.height(32);
+                                        Button.borderRadius(16);
+                                        Button.fontSize(14);
+                                        Button.onClick(async () => {
+                                            await this.dockBar?.launchApp(item.bundle);
+                                        });
+                                    }, Button);
+                                    Button.pop();
+                                    Row.pop();
+                                    ListItem.pop();
+                                };
+                                this.observeComponentCreation2(itemCreation2, ListItem);
+                                ListItem.pop();
+                            }
+                        };
+                        this.forEachUpdateFunction(elmtId, this.searchResults, forEachItemGenFunction);
+                    }, ForEach);
+                    ForEach.pop();
+                    List.pop();
+                });
+            }
+            else if (this.searchKeyword && this.searchResults.length === 0) {
+                this.ifElseBranchUpdateFunction(2, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create(`âŒ æœªæ‰¾åˆ°â€œ${this.searchKeyword}â€ç›¸å…³åº”ç”¨`);
+                        Text.fontSize(16);
+                        Text.fontColor('#666');
+                        Text.margin({ top: 20 });
+                        Text.textAlign(TextAlign.Center);
+                    }, Text);
+                    Text.pop();
+                });
+            }
+            else {
+                this.ifElseBranchUpdateFunction(3, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Column.create();
+                    }, Column);
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create('æ¡Œé¢åº”ç”¨åŒºåŸŸ');
+                        Text.fontSize(18);
+                        Text.fontColor('#666');
+                        Text.textAlign(TextAlign.Center);
+                    }, Text);
+                    Text.pop();
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create('è¾“å…¥å…³é”®è¯æœç´¢å·²å®‰è£…åº”ç”¨');
+                        Text.fontSize(14);
+                        Text.fontColor('#999');
+                        Text.margin({ top: 10 });
+                        Text.textAlign(TextAlign.Center);
+                    }, Text);
+                    Text.pop();
+                    Column.pop();
+                });
+            }
+        }, If);
+        If.pop();
+        {
+            this.observeComponentCreation2((elmtId, isInitialRender) => {
+                if (isInitialRender) {
+                    let componentCall = new DockBar(this, {
+                        onlineDevices: this.__onlineDevices,
+                        searchKeyword: this.__searchKeyword
+                    }, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 125, col: 7 });
+                    ViewPU.create(componentCall);
+                    let paramsLambda = () => {
+                        return {
+                            onlineDevices: this.onlineDevices,
+                            searchKeyword: this.searchKeyword
+                        };
+                    };
+                    componentCall.paramsGenerator_ = paramsLambda;
+                }
+                else {
+                    this.updateStateVarsOfChildByElmtId(elmtId, {});
+                }
+            }, { name: "DockBar" });
+        }
+        Column.pop();
+    }
+    async handleSearch() {
+        if (!this.searchKeyword) {
+            promptAction.showToast({ message: 'è¯·è¾“å…¥æœç´¢å…³é”®è¯' });
+            return;
+        }
+        this.isSearching = true;
+        try {
+            const results = await this.dockBar?.searchApp(this.searchKeyword) || [];
+            // æ ¼å¼åŒ–ç»“æœ
+            this.searchResults = results.map((item) => ({
+                name: item.name || '',
+                bundle: item.name // åŒ…å
+            }));
+            promptAction.showToast({ message: `æ‰¾åˆ°${this.searchResults.length}ä¸ªç›¸å…³åº”ç”¨` });
+        }
+        catch (error) {
+            this.searchResults = [];
+            promptAction.showToast({ message: 'æœç´¢å¤±è´¥ï¼Œè¯·é‡è¯•' });
+            console.error(`æœç´¢é”™è¯¯ï¼š${error.message}`);
+        }
+        finally {
+            this.isSearching = false;
+        }
+    }
+    rerender() {
+        this.updateDirtyElements();
+    }
+    static getEntryName() {
+        return "LauncherDesktop";
+    }
+}
+registerNamedRoute(() => new LauncherDesktop(undefined, {}), "", { bundleName: "com.example.myapplication", moduleName: "entry", pagePath: "pages/Index", pageFullPath: "entry/src/main/ets/pages/Index", integratedHsp: "false", moduleType: "followWithHap" });
+//# sourceMappingURL=Index.js.mapÂ’ÙHE:\Work_home\School_homework\DevEco\entry\src\main\ets\pages\DockBar.etsÙ` hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsÙFE:\Work_home\School_homework\DevEco\entry\src\main\ets\pages\Index.etsÔrB›ªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ)E:\Work_home\School_homework\DevEco\entryÙ#E:\Work_home\School_homework\DevEco¥entry¥1.0.0Ô  Ù)E:\Work_home\School_homework\DevEco\entryÔrCÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚimport DockBar from './DockBar';
+import type { DeviceInfo } from './DockBar';
+import promptAction from '@ohos.promptAction';
+// ä¿®å¤ï¼šå¯¼å…¥Stageæ¨¡å¼æ­£ç¡®çš„ä¸Šä¸‹æ–‡ç±»å‹ï¼ˆAbilityContextè€ŒéåŸºç¡€Contextï¼‰
+import type { Context } from '@ohos.abilityAccessCtrl';
+// ä¿®å¤ï¼šå¯¼å…¥BundleInfoç±»å‹ï¼ŒåŒ¹é…DockBarçš„æœç´¢ç»“æœ
+import bundleManager from '@ohos.bundle.bundleManager';
+
+// æœç´¢ç»“æœé¡¹çš„æ¥å£å®šä¹‰ï¼ˆé€‚é…çœŸå®BundleInfoç»“æ„ï¼‰
+interface SearchResultItem {
+  name: string; // åº”ç”¨å
+  bundle: string; // åŒ…å
+}
+
+@Entry
+@Component
+struct LauncherDesktop {
+  @State onlineDevices: Array<DeviceInfo> = [
+    { deviceId: 'local_device_01', deviceName: 'æµ‹è¯•', deviceType: 'Laptop' }
+  ];
+  @State searchKeyword: string = '';
+  @State searchResults: Array<SearchResultItem> = [];
+  @State isSearching: boolean = false;
+  private context: Context = getContext(this) as Context;
+  private dockBar: DockBar | null = null;
+
+  build() {
+    Column({ space: 15 }) {
+      // æ›¿æ¢suffixä¸ºRowå¸ƒå±€
+      // æœç´¢æ  + æœç´¢æŒ‰é’® ç»„åˆå¸ƒå±€
+      Row({ space: 10 }) {
+        TextInput({ placeholder: 'ğŸ” æœç´¢åº”ç”¨/æ–‡ä»¶/äº’è”è®¾å¤‡' })
+          .flexGrow(1) // å æ»¡å‰©ä½™å®½åº¦
+          .height(48)
+          .backgroundColor('#f0f2f5')
+          .borderRadius(24)
+          .padding({ left: 20, right: 20 })
+          .fontSize(16)
+          .onChange((value) => {
+            this.searchKeyword = value.trim();
+            if (!this.searchKeyword) {
+              this.searchResults = [];
+            }
+          })
+          .onSubmit(async () => {
+            await this.handleSearch();
+          });
+
+        // æœç´¢æŒ‰é’®ï¼ˆæ›¿ä»£suffixï¼Œæ— å…¼å®¹æ€§é—®é¢˜ï¼‰
+        Button('æœç´¢')
+          .width(60)
+          .height(32)
+          .backgroundColor('#007dff')
+          .borderRadius(16)
+          .fontColor('#fff')
+          .fontSize(14)
+          .onClick(async () => {
+            await this.handleSearch();
+          });
+      }
+      .width('92%') // ä¿æŒåŸå®½åº¦
+      .alignItems(VerticalAlign.Center);
+
+      // è®¾å¤‡æç¤ºï¼ˆé€»è¾‘ä¸å˜ï¼‰
+      if (this.onlineDevices.length > 0) {
+        Text(`ğŸ“± å·²å‘ç° ${this.onlineDevices.length} å°åˆ†å¸ƒå¼è®¾å¤‡`)
+          .fontSize(15)
+          .fontColor('#007dff')
+          .margin({ top: 10 })
+          .textAlign(TextAlign.Center);
+      }
+
+      // æœç´¢ç»“æœåŒºåŸŸ
+      if (this.isSearching) {
+        Text('ğŸ” æ­£åœ¨æœç´¢...')
+          .fontSize(16)
+          .fontColor('#666')
+          .margin({ top: 20 })
+          .textAlign(TextAlign.Center);
+      } else if (this.searchKeyword && this.searchResults.length > 0) {
+        List() {
+          ForEach(this.searchResults, (item: SearchResultItem) => {
+            ListItem() {
+              Row({ space: 10 }) {
+                Text('ğŸ“±').fontSize(20)
+                Column({ space: 4 }) {
+                  Text(item.name).fontSize(16).fontColor('#333')
+                  Text(`åŒ…åï¼š${item.bundle}`).fontSize(12).fontColor('#999')
+                }.flexGrow(1)
+                Button('å¯åŠ¨')
+                  .width(60)
+                  .height(32)
+                  .borderRadius(16)
+                  .fontSize(14)
+                  .onClick(async () => {
+                    await this.dockBar?.launchApp(item.bundle);
+                  })
+              }
+              .padding({ left: 15, right: 15, top: 10, bottom: 10 })
+              .backgroundColor('#fff')
+              .borderRadius(12)
+              .margin({ bottom: 8 })
+            }
+          })
+        }
+        .width('92%')
+        .height('auto')
+        .flexGrow(1)
+        .margin({ top: 10 });
+      } else if (this.searchKeyword && this.searchResults.length === 0) {
+        Text(`âŒ æœªæ‰¾åˆ°â€œ${this.searchKeyword}â€ç›¸å…³åº”ç”¨`)
+          .fontSize(16)
+          .fontColor('#666')
+          .margin({ top: 20 })
+          .textAlign(TextAlign.Center);
+      } else {
+        Column()
+          .flexGrow(1)
+          .width('100%')
+          .justifyContent(FlexAlign.Center) {
+          Text('æ¡Œé¢åº”ç”¨åŒºåŸŸ').fontSize(18).fontColor('#666').textAlign(TextAlign.Center);
+          Text('è¾“å…¥å…³é”®è¯æœç´¢å·²å®‰è£…åº”ç”¨').fontSize(14).fontColor('#999').margin({ top: 10 }).textAlign(TextAlign.Center);
+        }
+      }
+      DockBar({
+        onlineDevices: $onlineDevices,
+        searchKeyword: $searchKeyword
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ top: 20 })
+    .backgroundColor('#f5f7fa');
+  }
+
+  private async handleSearch() {
+    if (!this.searchKeyword) {
+      promptAction.showToast({ message: 'è¯·è¾“å…¥æœç´¢å…³é”®è¯' });
+      return;
+    }
+    this.isSearching = true;
+    try {
+      const results = await this.dockBar?.searchApp(this.searchKeyword) || [];
+      // æ ¼å¼åŒ–ç»“æœ
+      this.searchResults = results.map((item: bundleManager.BundleInfo) => ({
+        name: item.name || '', // ä½¿ç”¨nameå±æ€§ä½œä¸ºåº”ç”¨å
+        bundle: item.name // åŒ…å
+      } as SearchResultItem));
+      promptAction.showToast({ message: `æ‰¾åˆ°${this.searchResults.length}ä¸ªç›¸å…³åº”ç”¨` });
+    } catch (error) {
+      this.searchResults = [];
+      promptAction.showToast({ message: 'æœç´¢å¤±è´¥ï¼Œè¯·é‡è¯•' });
+      console.error(`æœç´¢é”™è¯¯ï¼š${(error as Error).message}`);
+    } finally {
+      this.isSearching = false;
+    }
+  }
+}ÀÔrD’²@ohos.promptAction©./DockBarÔrE—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙ` hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsÔrF‘¯hostModulesInfo’ÔrG’²hostDependencyName®hostModuleName²@ohos.promptAction¥entryG²@ohos.promptAction¥entryÃªoh-resolveÂEAÂÙHE:\Work_home\School_homework\DevEco\entry\src\main\ets\pages\DockBar.etsAÃªoh-resolveÂ“ÔrH–§version¤fileªsourceRoot§sources¥names¨mappings¨Index.js ‘©Index.etsÜY–”    ”  ”  ”  ”  ”    –”   ” ” ” ”- -”. .’” ” ‘”  ‘”< ,” ” ” ” ”) !”+ #”5 -”7 /”; 3”= 5”ÌG ?”ÌI ÌA”ÌQ ÌI”ÌS ÌK‘”	 ’”< !”> #’”< 2”> 4’”:  ”? %•” ”! '”" (”& ,”' 8’” $” (‘” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ‘” ˜” ” 
+” ” ”! ”# ”% ”' –” ” 
+” Ì” Ì
+” Ì” Ì–” ” 
+” Ì‚” Ì‚” Ì‚”  Ì‚š” ” 
+” Ìƒ” Ìƒ” Ìƒ” Ìƒ”  Ìƒ”" Ìƒ”$ Ìƒ”& Ìƒ–” ” 
+” Ì„”" Ì„”# Ì„”, Ì„’” ” ’” ” ˜” ” 	” 
+” ” ”  ”" ”$ ’” ” ’” ” –” ” 	” <” <” <” <’” ” ’” ” ˜” ” 	” =” =” =”( =”) = ”/ =&˜” ” ” ” ”* ”, !”= 2”? 4–” ” ”  ”  ”  ”   –” ” ” !” !” !” !–” ” ” "”% "”& "”/ "$–” ” ” #”" #”# #”% #” ” ” $” $” $”  $”$ $”& $”( $”* $”/ $$”1 $&”3 $(”5 $*–” ” ” %” %” %”! %™” ” ” &” &” &”  &”% &”' &”) &š” '” '” '”" '”% '!”* '&”+ ''”/ '+”1 '-”2 '.—” (” (” (” (” (”' (#”) (%—” )” )” )”& ) ”) )#”+ )%”, )&‘” *’” +
+” +˜” ” ” ,” ,” ,”$ ,”( ,”* ,—” -” -” -” -”' -#”) -%”* -&’” .
+” .’” 0”$ 0 ”” 1” 1”# 1”' 1’” 0”$ 0 –” 1” 1” 2” 2” 2” 2’” 0”$ 0 –” 1” 1” 3” 3” 3” 3’” 0”$ 0 –” 1” 1” 4”" 4”# 4”, 4$’” 0”$ 0 –” 1” 1” 5” 5”  5”" 5’” 0”$ 0 –” 1” 1” 6” 6” 6”# 6’” 0”$ 0 –” 1” 1” 7” 7” 7” 7’” 0”$ 0 ˜” 1” 1” 8” 8” 8”  8”$ 8”& 8—” 9” 9” 9” 9”' 9#”) 9%”* 9&’” :
+” :’” 0”  0 ’” 1” 1’” ” ’” ” ’” ” 	’” ?” ?š” Ì@” Ì@
+” Ì@” Ì@”" Ì@”# Ì@”) Ì@#”, Ì@&”- Ì@'”/ Ì@)š” ÌA” ÌA”$ ÌA”. ÌA”2 ÌA”3 ÌA”Ì@ ÌA)”ÌA ÌA*”ÌG ÌA0”ÌP ÌA9–” ÌA” ÌA” ÌB”% ÌB”& ÌB”( ÌB–” ÌA” ÌA” ÌC”& ÌC”' ÌC”0 ÌCš” ÌA” ÌA” ÌD”# ÌD”$ ÌD”& ÌD”) ÌD”+ ÌD”- ÌD”/ ÌD˜” ÌA” ÌA” ÌE”& ÌE”' ÌE”0 ÌE”1 ÌE”7 ÌE%’” ÌA” ÌA‘” ÌF’” ÌH” ÌH‘” ÌF’” ÌH” ÌH–” ÌI” ÌI
+” ÌI” ÌI”  ÌI”" ÌI”” ÌJ” ÌJ”$ ÌJ”0 ÌJ–” ÌJ” ÌJ” ÌK”% ÌK”& ÌK”( ÌK–” ÌJ” ÌJ” ÌL”& ÌL”' ÌL”- ÌLš” ÌJ” ÌJ” ÌM”# ÌM”$ ÌM”& ÌM”) ÌM”+ ÌM”- ÌM”/ ÌM˜” ÌJ” ÌJ” ÌN”& ÌN”' ÌN”0 ÌN”1 ÌN”7 ÌN%’” ÌJ” ÌJ‘” ÌO” ÌO” ÌO” ÌO” ÌO”' ÌO#”+ ÌO'”/ ÌO+”0 ÌO,”= ÌO9”> ÌO:”ÌD ÌOÌ@”ÌG ÌOÌC”ÌH ÌOÌD”ÌJ ÌOÌF’” ÌP” ÌP–” ÌP” ÌP” Ìi	”" Ìi”# Ìi”( Ìi–” ÌP” ÌP” Ìj	”# Ìj”$ Ìj”* Ìj–” ÌP” ÌP” Ìk	”% Ìk”& Ìk”' Ìkš” ÌP” ÌP” Ìl	”# Ìl”$ Ìl”& Ìl”) Ìl”+ Ìl”- Ìl”/ Ìl’” ÌQ
+” ÌQ’”( ÌR”0 ÌR˜”( ÌS”+ ÌS”3 ÌS”5 ÌS”: ÌS”< ÌS”> ÌS”Ì@ ÌSÜ ”( ÌS”+ ÌS”, Ìb”3 Ìb”4 Ìb”6 Ìb”: Ìb”< Ìb”> Ìb!”Ì@ Ìb#”ÌE Ìb(”ÌG Ìb*”ÌI Ìb,”ÌK Ìb.”ÌN Ìb1”ÌP Ìb3”ÌR Ìb5”ÌT Ìb7”ÌZ Ìb=”Ì\ Ìb?”Ì^ ÌbÌA”Ì` ÌbÌC–”( ÌS”+ ÌS”, Ìc”; Ìc”< Ìc”ÌB Ìc%–”( ÌS”+ ÌS”, Ìd”8 Ìd”9 Ìd”; Ìdš”( ÌS”+ ÌS”, Ìe”2 Ìe”3 Ìe”5 Ìe”; Ìe”= Ìe ”> Ìe!”Ì@ Ìe#””( ÌT”, ÌT”4 ÌT”8 ÌT–”( ÌT”, ÌT”- ÌT”5 ÌT#”6 ÌT$”8 ÌT&’”$ ÌT”( ÌT˜”( ÌU”. ÌU”6 ÌU”8 ÌU”= ÌU”? ÌU ”Ì@ ÌU!”ÌB ÌU#–”( ÌU”. ÌU”/ ÌX”7 ÌX”8 ÌX”9 ÌX–”( ÌV”, ÌV”4 ÌV”8 ÌV”9 ÌV”= ÌV –”( ÌV”, ÌV”- ÌV"”5 ÌV*”6 ÌV+”8 ÌV-–”( ÌV”, ÌV”- ÌV/”6 ÌV8”7 ÌV9”= ÌV?’”$ ÌV”( ÌV˜”( ÌW”, ÌW”4 ÌW”: ÌW”> ÌW!”? ÌW"”ÌE ÌW(”ÌG ÌW*–”( ÌW”, ÌW”- ÌW,”5 ÌW4”6 ÌW5”8 ÌW7–”( ÌW”, ÌW”- ÌW9”6 ÌWÌB”7 ÌWÌC”= ÌWÌI’”$ ÌW”( ÌW’”$ ÌU”* ÌU””( ÌY”. ÌY”? ÌY”ÌC ÌY–”( ÌY”. ÌY”/ ÌZ”4 ÌZ”5 ÌZ”7 ÌZ–”( ÌY”. ÌY”/ Ì[”5 Ì[”6 Ì[”8 Ì[–”( ÌY”. ÌY”/ Ì\”; Ì\”< Ì\ ”> Ì\"–”( ÌY”. ÌY”/ Ì]”7 Ì]”8 Ì]”: Ì]˜”( ÌY”. ÌY”/ Ì^”6 Ì^”7 Ì^”< Ì^ ”Ì@ Ì^$”ÌB Ì^&”, Ì_”2 Ì_”6 Ì_”7 Ì_”> Ì_&”Ì@ Ì_(”ÌI Ì_1”ÌJ Ì_2”ÌN Ì_6”ÌO Ì_7”ÌU Ì_=”ÌV Ì_>”ÌW Ì_?’”( Ì`”) Ì`’”$ ÌY”* ÌY’”$ ÌS”' ÌS’”$ ÌR”, ÌR’”  ÌR”( ÌR””; ÌQ”? ÌQ”Ì@ ÌQ”ÌM ÌQ$’” ÌQ
+” ÌQ’” ÌP” ÌP‘” Ìm” Ìm” Ìm” Ìm” Ìm”' Ìm#”+ Ìm'”/ Ìm+”0 Ìm,”= Ìm9”> Ìm:”ÌD ÌmÌ@”ÌI ÌmÌE”ÌJ ÌmÌF”ÌL ÌmÌH˜” Ìn” Ìn”$ Ìn”- Ìn”1 Ìn”2 Ìn”? Ìn(”ÌF Ìn/–” Ìn” Ìn” Ìo”% Ìo”& Ìo”( Ìo–” Ìn” Ìn” Ìp”& Ìp”' Ìp”- Ìpš” Ìn” Ìn” Ìq”# Ìq”$ Ìq”& Ìq”) Ìq”+ Ìq”- Ìq”/ Ìq˜” Ìn” Ìn” Ìr”& Ìr”' Ìr”0 Ìr”1 Ìr”7 Ìr%’” Ìn” Ìn‘” Ìs‘” Ìs’” Ìt” Ìt”” Ìx
+” Ìx”$ Ìx”, Ìx–” Ìx
+” Ìx” Ìx”% Ìx!”& Ìx"”( Ìx$–” Ìx
+” Ìx” Ìx&”& Ìx/”' Ìx0”- Ìx6˜” Ìx
+” Ìx” Ìx8”& ÌxÌA”' ÌxÌB”0 ÌxÌK”1 ÌxÌL”7 ÌxÌR’” Ìx
+” Ìx”” Ìy
+” Ìy”$ Ìy”2 Ìy–” Ìy
+” Ìy” Ìy”% Ìy'”& Ìy(”( Ìy*–” Ìy
+” Ìy” Ìy,”& Ìy5”' Ìy6”- Ìy<š” Ìy
+” Ìy” Ìy>”# ÌyÌD”$ ÌyÌE”& ÌyÌG”) ÌyÌJ”+ ÌyÌL”- ÌyÌN”/ ÌyÌP˜” Ìy
+” Ìy” ÌyÌR”& ÌyÌ[”' ÌyÌ\”0 ÌyÌe”1 ÌyÌf”7 ÌyÌl’” Ìy
+” Ìy’” Ìt” Ìt‘” Ì{“”, Ì|”3 Ì|”: Ì|“” Ì}”% Ì}”; Ì}%“” Ì~”% Ì~”; Ì~%‘” Ì’” Ì}”) Ì}’” Ì~”) Ì~’” ” 
+‘” Ì…”” Ì‡
+”	 Ì‡”
+ Ì‡” Ì‡—” Ìˆ” Ìˆ” Ìˆ	” Ìˆ” Ìˆ” Ìˆ”! Ìˆœ” Ì‰” Ì‰” Ì‰”" Ì‰”# Ì‰”% Ì‰”, Ì‰&”. Ì‰(”8 Ì‰2”: Ì‰4”; Ì‰5”< Ì‰6’” ÌŠ” ÌŠ‘”	 Ì‹—” ÌŒ” ÌŒ” ÌŒ	” ÌŒ” ÌŒ” ÌŒ”  ÌŒ’” Ì” ÌÜ ” Ì” Ì” Ì” Ì”" Ì”& Ì ”' Ì!”. Ì(”0 Ì*”9 Ì3”: Ì4”> Ì8”? Ì9”ÌL ÌÌF”ÌM ÌÌG”ÌQ ÌÌK”ÌS ÌÌM”ÌT ÌÌN’” Ì” ÌŸ” Ì” Ì
+” Ì” Ì”! Ì”( Ì"”) Ì#”, Ì&”- Ì'”. Ì(”2 ÌÌF”4 ÌÌH”6 ÌÌJ”7 ÌÌK”8 ÌÌL˜” Ì‘” Ì‘” Ì‘” Ì‘” Ì‘” Ì‘”# Ì‘”% Ì‘˜” Ì’” Ì’” Ì’” Ì’” Ì’”! Ì’”" Ì’”' Ì’”” Ì“” Ì“” Ì“” Ì“Ü ” Ì”” Ì”” Ì””" Ì””# Ì””% Ì””, Ì”&”. Ì”(”3 Ì”-”7 Ì”1”8 Ì”2”ÌE Ì”?”ÌF Ì”Ì@”ÌL Ì”ÌF”ÌS Ì”ÌM”ÌU Ì”ÌO”ÌV Ì”ÌP”ÌW Ì”ÌQ‘”	 Ì•”” Ì•” Ì•” Ì•” Ì•—” Ì–” Ì–
+” Ì–” Ì–”! Ì–”# Ì–”$ Ì–œ” Ì—” Ì—” Ì—”" Ì—”# Ì—”% Ì—”, Ì—&”. Ì—(”8 Ì—2”: Ì—4”; Ì—5”< Ì—6œ” Ì˜” Ì˜” Ì˜” Ì˜” Ì˜”" Ì˜”' Ì˜,”( Ì˜-”/ Ì˜4”1 Ì˜6”2 Ì˜7”3 Ì˜8‘”	 Ì™‘” Ì™—” Ìš” Ìš
+” Ìš” Ìš” Ìš”$ Ìš”% Ìš‘”	 Ì›’” Ìœ” ÌœÔrI–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜb‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
+ ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ì ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌĞ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  Ìİ ‘”  ÌŞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìğ ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìı ‘”  Ìş ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
+ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ‘”  Í( ‘”  Í) ‘”  Í* ‘”  Í+ ‘”  Í, ‘”  Í- ‘”  Í. ‘”  Í/ ‘”  Í0 ‘”  Í1 ‘”  Í2 ‘”  Í3 ‘”  Í4 ‘”  Í5 ‘”  Í6 ‘”  Í7 ‘”  Í8 ‘”  Í9 ‘”  Í: ‘”  Í; ‘”  Í< ‘”  Í= ‘”  Í> ‘”  Í? ‘”  Í@ ‘”  ÍA ‘”  ÍB ‘”  ÍC ‘”  ÍD ‘”  ÍE ‘”  ÍF ‘”  ÍG ‘”  ÍH ‘”  ÍI ‘”  ÍJ ‘”  ÍK ‘”  ÍL ‘”  ÍM ‘”  ÍN ‘”  ÍO ‘”  ÍP ‘”  ÍQ ‘”  ÍR ‘”  ÍS ‘”  ÍT ‘”  ÍU ‘”  ÍV ‘”  ÍW ‘”  ÍX ‘”  ÍY ‘”  ÍZ ‘”  Í[ ‘”  Í\ ‘”  Í] ‘”  Í^ ‘”  Í_ ‘”  Í` ‘”  Ía ÔrJ’§missing¦pluginÃ¦genAbcÂÔ  ÔrK”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache’ÔrL•¤type¥start£endªspecifiers¦source±ImportDeclarationÌ€Ì ‘ÔrM”¤type¥start£end¥local¶ImportDefaultSpecifierÌ‡ÌÔrN”¤type¥start£end¤nameªIdentifierÌ‡Ì§DockBarÔrO•¤type¥start£end¥value£raw§LiteralÌ”ÌŸ©./DockBar«'./DockBar'L±ImportDeclarationÌ¢ÌĞ‘M¶ImportDefaultSpecifierÌ©ÌµNªIdentifierÌ©Ìµ¬promptActionO§LiteralÌ»ÌÏ²@ohos.promptAction´'@ohos.promptAction'

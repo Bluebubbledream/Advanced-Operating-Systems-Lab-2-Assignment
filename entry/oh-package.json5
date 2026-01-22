@@ -1,0 +1,11 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Launcher主模块",
+  "main": "",
+  "dependencies": {},
+  "devDependencies": {},
+  "ohos": {
+    "apiVersion": 6
+  }
+}

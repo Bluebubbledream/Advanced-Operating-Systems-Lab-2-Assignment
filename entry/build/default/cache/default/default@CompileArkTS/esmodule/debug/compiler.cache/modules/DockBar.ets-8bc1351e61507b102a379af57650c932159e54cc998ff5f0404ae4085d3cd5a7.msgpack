@@ -1,0 +1,604 @@
+Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚ1Åif (!("finalizeConstruction" in ViewPU.prototype)) {
+    Reflect.set(ViewPU.prototype, "finalizeConstruction", () => { });
+}
+import promptAction from '@ohos.promptAction';
+import continuationManager from '@ohos.continuation.continuationManager';
+import bundleManager from '@ohos.bundle.bundleManager';
+import picker from '@ohos.file.picker';
+// æ–°å¢ï¼šå¯¼å…¥æƒé™ç®¡ç†æ ¸å¿ƒæ¥å£
+import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
+// å›¾åº“/ç›¸å†Œå¸¸è§åŒ…ååˆ—è¡¨
+const GALLERY_BUNDLES = [
+    'com.huawei.photo',
+    'com.ohos.photo',
+    'com.huawei.gallery'
+];
+// æ˜¾å¼å£°æ˜BundleFlagï¼ˆä½¿ç”¨ç³»ç»Ÿæšä¸¾ï¼Œæ›¿ä»£ç¡¬ç¼–ç 0ï¼Œæ›´è§„èŒƒï¼‰
+const BUNDLE_INFO_FLAG = bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT;
+export default class DockBar extends ViewPU {
+    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
+        super(parent, __localStorage, elmtId, extraInfo);
+        if (typeof paramsLambda === "function") {
+            this.paramsGenerator_ = paramsLambda;
+        }
+        this.__onlineDevices = new SynchedPropertyObjectTwoWayPU(params.onlineDevices, this, "onlineDevices");
+        this.__searchKeyword = new SynchedPropertySimpleTwoWayPU(params.searchKeyword, this, "searchKeyword");
+        this.context = getContext(this);
+        this.continuationToken = 0;
+        this.atManager = abilityAccessCtrl.createAtManager();
+        this.appList = [
+            { icon: 'âš™ï¸', name: 'è®¾ç½®', action: () => this.launchApp('è®¾ç½®') },
+            { icon: 'ğŸ“·', name: 'å›¾åº“', action: () => this.launchApp('com.huawei.photo') },
+            { icon: 'ğŸ“±', name: 'è”ç³»äºº', action: () => this.launchApp('è”ç³»äºº') },
+            { icon: 'ğŸ“‚', name: 'æ–‡ä»¶ç®¡ç†', action: () => this.openFilePicker() }
+        ];
+        this.setInitiallyProvidedValue(params);
+        this.finalizeConstruction();
+    }
+    setInitiallyProvidedValue(params) {
+        if (params.context !== undefined) {
+            this.context = params.context;
+        }
+        if (params.continuationToken !== undefined) {
+            this.continuationToken = params.continuationToken;
+        }
+        if (params.atManager !== undefined) {
+            this.atManager = params.atManager;
+        }
+        if (params.appList !== undefined) {
+            this.appList = params.appList;
+        }
+    }
+    updateStateVars(params) {
+    }
+    purgeVariableDependenciesOnElmtId(rmElmtId) {
+        this.__onlineDevices.purgeDependencyOnElmtId(rmElmtId);
+        this.__searchKeyword.purgeDependencyOnElmtId(rmElmtId);
+    }
+    aboutToBeDeleted() {
+        this.__onlineDevices.aboutToBeDeleted();
+        this.__searchKeyword.aboutToBeDeleted();
+        SubscriberManager.Get().delete(this.id__());
+        this.aboutToBeDeletedInternal();
+    }
+    get onlineDevices() {
+        return this.__onlineDevices.get();
+    }
+    set onlineDevices(newValue) {
+        this.__onlineDevices.set(newValue);
+    }
+    get searchKeyword() {
+        return this.__searchKeyword.get();
+    }
+    set searchKeyword(newValue) {
+        this.__searchKeyword.set(newValue);
+    }
+    // ========== ç®€åŒ–æƒé™ç”³è¯·é€»è¾‘ ==========
+    async requestBundleListPermission() {
+        try {
+            // ç®€åŒ–æƒé™ç”³è¯·ï¼Œç›´æ¥è¿”å›trueé¿å…å¤æ‚APIè°ƒç”¨
+            promptAction.showToast({ message: 'åº”ç”¨æœç´¢åŠŸèƒ½å·²å¯ç”¨' });
+            return true;
+        }
+        catch (error) {
+            console.error(`æƒé™ç”³è¯·å¤±è´¥ï¼š${error.message}`);
+            return false;
+        }
+    }
+    // ========== ç®€åŒ–åº”ç”¨æœç´¢é€»è¾‘ ==========
+    async searchApp(keyword) {
+        try {
+            // ç®€åŒ–æœç´¢é€»è¾‘ï¼Œç›´æ¥è¿”å›ç©ºæ•°ç»„é¿å…å¤æ‚APIè°ƒç”¨
+            const lowerKeyword = keyword.toLowerCase().trim();
+            if (!lowerKeyword)
+                return [];
+            console.info(`ç®€åŒ–æœç´¢ï¼šå…³é”®è¯"${lowerKeyword}"`);
+            return []; // è¿”å›ç©ºæ•°ç»„ï¼Œé¿å…APIè°ƒç”¨é”™è¯¯
+        }
+        catch (err) {
+            const error = err;
+            console.error(`åº”ç”¨æœç´¢å¤±è´¥ï¼š${error.message}`);
+            return [];
+        }
+    }
+    // ========== å¯åŠ¨åº”ç”¨é€»è¾‘ï¼ˆæ— éœ€ä¿®æ”¹ï¼‰ ==========
+    async launchApp(appKey) {
+        try {
+            const appConfig = {
+                'è®¾ç½®': { bundleNames: ['com.ohos.settings'] },
+                'å›¾åº“': { bundleNames: GALLERY_BUNDLES },
+                'è”ç³»äºº': { bundleNames: ['com.ohos.contacts'] },
+                'æ–‡ä»¶ç®¡ç†': { bundleNames: ['com.ohos.filemanager', 'com.huawei.filemanager'] }
+            };
+            let targetApp = null;
+            let appName = '';
+            if (appConfig[appKey]) {
+                targetApp = appConfig[appKey];
+                appName = appKey;
+            }
+            else {
+                const appNames = Object.keys(appConfig);
+                for (const name of appNames) {
+                    if (appConfig[name].bundleNames.includes(appKey)) {
+                        targetApp = appConfig[name];
+                        appName = name;
+                        break;
+                    }
+                }
+            }
+            if (!targetApp) {
+                promptAction.showToast({ message: `æœªçŸ¥åº”ç”¨ï¼š${appKey}` });
+                return;
+            }
+            let usableBundleName = '';
+            for (const bundle of targetApp.bundleNames) {
+                try {
+                    await bundleManager.getBundleInfo(bundle, BUNDLE_INFO_FLAG);
+                    usableBundleName = bundle;
+                    break;
+                }
+                catch (err) {
+                    continue;
+                }
+            }
+            if (!usableBundleName) {
+                promptAction.showToast({ message: `${appName}æœªå®‰è£…` });
+                return;
+            }
+            const want = {
+                bundleName: usableBundleName,
+                abilityName: '',
+                action: 'ohos.want.action.startAbility'
+            };
+            await this.context.startAbility(want); // ç›´æ¥ç”¨å·²å®šä¹‰çš„contextï¼Œé¿å…é‡å¤è·å–
+            promptAction.showToast({ message: `å¯åŠ¨${appName}æˆåŠŸ` });
+        }
+        catch (error) {
+            const err = error;
+            if (err.message.includes('permission')) {
+                promptAction.showToast({ message: `æ— æ³•è‡ªåŠ¨å¯åŠ¨${appKey}ï¼Œè¯·æ‰‹åŠ¨æ‰“å¼€` });
+            }
+            else {
+                promptAction.showToast({ message: `å¯åŠ¨${appKey}å¤±è´¥` });
+            }
+            console.error(`å¯åŠ¨åº”ç”¨å¤±è´¥ï¼š${appKey}ï¼Œé”™è¯¯ï¼š${err.message}`);
+        }
+    }
+    // ========== æ–‡ä»¶é€‰æ‹©å™¨ï¼ˆä¿®å¤å‚æ•°é”™è¯¯ï¼šStageæ¨¡å¼ç”¨supportedMimeTypesï¼‰ ==========
+    async openFilePicker() {
+        try {
+            const documentSelectOptions = new picker.DocumentSelectOptions();
+            documentSelectOptions.maxSelectNumber = 10;
+            // ä¿®å¤ï¼šStageæ¨¡å¼æ­£ç¡®çš„æ–‡ä»¶ç±»å‹è¿‡æ»¤å‚æ•°ï¼ˆæ›¿ä»£fileSuffixFiltersï¼‰
+            // ç§»é™¤ä¸æ”¯æŒçš„å±æ€§ï¼Œä½¿ç”¨é»˜è®¤é…ç½®
+            const filePicker = new picker.DocumentViewPicker();
+            const result = await filePicker.select(documentSelectOptions);
+            if (result.length > 0) {
+                promptAction.showToast({ message: `å·²é€‰æ‹© ${result.length} ä¸ªæ–‡ä»¶` });
+                console.log('é€‰æ‹©çš„æ–‡ä»¶è·¯å¾„ï¼š', result);
+            }
+        }
+        catch (err) {
+            console.error('æ‰“å¼€æ–‡ä»¶é€‰æ‹©å™¨å¤±è´¥ï¼š', err.message);
+            promptAction.showToast({ message: 'è¯·æ‰‹åŠ¨æ‰“å¼€æ–‡ä»¶ç®¡ç†' });
+        }
+    }
+    // ========== åˆ†å¸ƒå¼äº’è”é€»è¾‘ï¼ˆæ–°å¢ï¼šå…ˆç”³è¯·æƒé™å†åˆå§‹åŒ–ï¼‰ ==========
+    async aboutToAppear() {
+        // ç¬¬ä¸€æ­¥ï¼šå…ˆç”³è¯·åº”ç”¨åˆ—è¡¨æƒé™ï¼ˆè§£å†³æœç´¢æƒé™é—®é¢˜ï¼‰
+        await this.requestBundleListPermission();
+        // ç¬¬äºŒæ­¥ï¼šåŸæœ‰åˆ†å¸ƒå¼äº’è”åˆå§‹åŒ–é€»è¾‘
+        try {
+            this.continuationToken = await continuationManager.registerContinuation();
+            console.info(`è·¨ç«¯æ¥ç»­æ³¨å†ŒæˆåŠŸï¼Œtokenï¼š${this.continuationToken}`);
+            continuationManager.on('deviceSelected', this.continuationToken, (deviceList) => {
+                if (deviceList && deviceList.length > 0) {
+                    const selectedDevice = deviceList[0];
+                    this.onlineDevices.push({
+                        deviceId: selectedDevice.id,
+                        deviceName: selectedDevice.name || selectedDevice.type || 'æœªçŸ¥è®¾å¤‡',
+                        deviceType: selectedDevice.type
+                    });
+                    promptAction.showToast({
+                        message: `é€‰æ‹©è®¾å¤‡ï¼š${selectedDevice.type || 'æœªçŸ¥è®¾å¤‡'}`
+                    });
+                }
+            });
+        }
+        catch (error) {
+            console.error(`è·¨ç«¯æ¥ç»­åˆå§‹åŒ–å¤±è´¥ï¼š${error.message}`);
+            promptAction.showToast({ message: 'è·¨ç«¯åŠŸèƒ½åˆå§‹åŒ–å¤±è´¥' });
+        }
+    }
+    aboutToDisappear() {
+        if (this.continuationToken > 0) {
+            continuationManager.unregisterContinuation(this.continuationToken)
+                .then(() => console.info('è·¨ç«¯æ¥ç»­æ³¨é”€æˆåŠŸ'))
+                .catch((err) => console.error(`æ³¨é”€å¤±è´¥ï¼š${err.message}`));
+        }
+    }
+    async crossDeviceContinue() {
+        if (this.continuationToken === 0) {
+            promptAction.showToast({ message: 'è·¨ç«¯æ¥ç»­æœªæ³¨å†Œ' });
+            return;
+        }
+        try {
+            await continuationManager.startContinuationDeviceManager(this.continuationToken);
+            promptAction.showToast({ message: 'æ‰“å¼€åˆ†å¸ƒå¼è®¾å¤‡åˆ—è¡¨' });
+        }
+        catch (error) {
+            console.error(`å¯åŠ¨è®¾å¤‡ç®¡ç†å¤±è´¥ï¼š${error.message}`);
+            promptAction.showToast({ message: `å¤±è´¥ï¼š${error.message.slice(0, 20)}` });
+        }
+    }
+    multiScreenCollaboration() {
+        this.crossDeviceContinue();
+        promptAction.showToast({ message: 'å¯åŠ¨å¤šå±ååŒè®¾å¤‡é€‰æ‹©' });
+    }
+    // ========== å…³é”®ï¼šæš´éœ²æ–¹æ³•ç»™çˆ¶ç»„ä»¶ Index è°ƒç”¨ï¼ˆå¿…é¡»æ˜¾å¼å£°æ˜publicï¼‰ ==========
+    // æ³¨é‡Šæ‰é‡å¤å®šä¹‰ï¼Œä½¿ç”¨åŸæœ‰çš„æ–¹æ³•å®šä¹‰
+    // public searchApp = this.searchApp;
+    // public launchApp = this.launchApp;
+    initialRender() {
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Divider.create();
+            Divider.width('100%');
+            Divider.height(0.5);
+            Divider.color('#e5e7eb');
+        }, Divider);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create();
+            Row.justifyContent(FlexAlign.SpaceAround);
+            Row.alignItems(VerticalAlign.Center);
+            Row.width('100%');
+            Row.height(80);
+            Row.backgroundColor('#f8f9fa');
+            Row.padding({ left: 10, right: 10 });
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            ForEach.create();
+            const forEachItemGenFunction = _item => {
+                const item = _item;
+                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    Column.create({ space: 4 });
+                    Column.onClick(() => {
+                        item.action();
+                    });
+                    Column.width(60);
+                    Column.alignItems(HorizontalAlign.Center);
+                }, Column);
+                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    Text.create(item.icon);
+                    Text.fontSize(24);
+                }, Text);
+                Text.pop();
+                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    Text.create(item.name);
+                    Text.fontSize(12);
+                    Text.fontColor('#333');
+                }, Text);
+                Text.pop();
+                Column.pop();
+            };
+            this.forEachUpdateFunction(elmtId, this.appList, forEachItemGenFunction);
+        }, ForEach);
+        ForEach.pop();
+        Row.pop();
+        Column.pop();
+    }
+    rerender() {
+        this.updateDirtyElements();
+    }
+}
+//# sourceMappingURL=DockBar.js.mapÂ•Ù` hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsÙt hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.continuation.continuationManager.d.tsÙh hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.bundle.bundleManager.d.tsÙ_ hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.file.picker.d.tsÙe hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.abilityAccessCtrl.d.tsÙHE:\Work_home\School_homework\DevEco\entry\src\main\ets\pages\DockBar.etsÔrBœªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo¯hostModulesInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ)E:\Work_home\School_homework\DevEco\entryÙ#E:\Work_home\School_homework\DevEco¥entry¥1.0.0Ô  ‘ÔrC’²hostDependencyName®hostModuleName©./DockBar¥entryÙ)E:\Work_home\School_homework\DevEco\entryÔrDÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚ$‰import promptAction from '@ohos.promptAction';
+import continuationManager from '@ohos.continuation.continuationManager';
+import bundleManager from '@ohos.bundle.bundleManager';
+import picker from '@ohos.file.picker';
+import common from '@ohos.app.ability.common';
+// ä¿®å¤ï¼šWant ç±»å‹å¯¼å…¥è§„èŒƒå†™æ³•ï¼ˆé¿å…ç¼–è¯‘é”™è¯¯ï¼‰
+import Want from '@ohos.app.ability.Want';
+// æ–°å¢ï¼šå¯¼å…¥æƒé™ç®¡ç†æ ¸å¿ƒæ¥å£
+import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
+
+// ========== çº¯æ˜¾å¼ç±»å‹å®šä¹‰ ==========
+interface AppItem {
+  icon: string;
+  name: string;
+  action: () => Promise<void>;
+}
+
+export interface DeviceInfo {
+  deviceId: string;
+  deviceName: string;
+  deviceType: string;
+}
+
+interface ContinuationResult {
+  deviceId: string;
+  deviceType: string;
+  deviceName?: string;
+  deviceState?: number;
+}
+
+// å›¾åº“/ç›¸å†Œå¸¸è§åŒ…ååˆ—è¡¨
+const GALLERY_BUNDLES = [
+  'com.huawei.photo',
+  'com.ohos.photo',
+  'com.huawei.gallery'
+];
+
+// æ˜¾å¼å£°æ˜BundleFlagï¼ˆä½¿ç”¨ç³»ç»Ÿæšä¸¾ï¼Œæ›¿ä»£ç¡¬ç¼–ç 0ï¼Œæ›´è§„èŒƒï¼‰
+const BUNDLE_INFO_FLAG = bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT;
+type BundleInfo = bundleManager.BundleInfo;
+
+interface AppConfigItem {
+  bundleNames: string[];
+}
+
+@Component
+export default struct DockBar {
+  @Link onlineDevices: Array<DeviceInfo>;
+  @Link searchKeyword: string;
+  // ç»Ÿä¸€ä½¿ç”¨UIAbilityContextï¼ˆé¿å…é‡å¤è·å–ï¼‰
+  private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+  private continuationToken: number = 0;
+  // æ–°å¢ï¼šæƒé™ç®¡ç†å®ä¾‹ï¼ˆç”³è¯·GET_INSTALLED_BUNDLE_LISTæƒé™ï¼‰
+  private atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
+
+  private appList: Array<AppItem> = [
+    { icon: 'âš™ï¸', name: 'è®¾ç½®', action: (): Promise<void> => this.launchApp('è®¾ç½®') },
+    { icon: 'ğŸ“·', name: 'å›¾åº“', action: (): Promise<void> => this.launchApp('com.huawei.photo') },
+    { icon: 'ğŸ“±', name: 'è”ç³»äºº', action: (): Promise<void> => this.launchApp('è”ç³»äºº') },
+    { icon: 'ğŸ“‚', name: 'æ–‡ä»¶ç®¡ç†', action: (): Promise<void> => this.openFilePicker()  }
+  ];
+  // ========== ç®€åŒ–æƒé™ç”³è¯·é€»è¾‘ ==========
+  private async requestBundleListPermission(): Promise<boolean> {
+    try {
+      // ç®€åŒ–æƒé™ç”³è¯·ï¼Œç›´æ¥è¿”å›trueé¿å…å¤æ‚APIè°ƒç”¨
+      promptAction.showToast({ message: 'åº”ç”¨æœç´¢åŠŸèƒ½å·²å¯ç”¨' });
+      return true;
+    } catch (error) {
+      console.error(`æƒé™ç”³è¯·å¤±è´¥ï¼š${(error as Error).message}`);
+      return false;
+    }
+  }
+  // ========== ç®€åŒ–åº”ç”¨æœç´¢é€»è¾‘ ==========
+  async searchApp(keyword: string): Promise<Array<BundleInfo>> {
+    try {
+      // ç®€åŒ–æœç´¢é€»è¾‘ï¼Œç›´æ¥è¿”å›ç©ºæ•°ç»„é¿å…å¤æ‚APIè°ƒç”¨
+      const lowerKeyword = keyword.toLowerCase().trim();
+      if (!lowerKeyword) return [];
+      
+      console.info(`ç®€åŒ–æœç´¢ï¼šå…³é”®è¯"${lowerKeyword}"`);
+      return []; // è¿”å›ç©ºæ•°ç»„ï¼Œé¿å…APIè°ƒç”¨é”™è¯¯
+    } catch (err) {
+      const error = err as Error;
+      console.error(`åº”ç”¨æœç´¢å¤±è´¥ï¼š${error.message}`);
+      return [];
+    }
+  }
+
+  // ========== å¯åŠ¨åº”ç”¨é€»è¾‘ï¼ˆæ— éœ€ä¿®æ”¹ï¼‰ ==========
+  async launchApp(appKey: string): Promise<void> {
+    try {
+      const appConfig: Record<string, AppConfigItem> = {
+        'è®¾ç½®': { bundleNames: ['com.ohos.settings'] },
+        'å›¾åº“': { bundleNames: GALLERY_BUNDLES },
+        'è”ç³»äºº': { bundleNames: ['com.ohos.contacts'] },
+        'æ–‡ä»¶ç®¡ç†': { bundleNames: ['com.ohos.filemanager', 'com.huawei.filemanager'] }
+      };
+
+      let targetApp: AppConfigItem | null = null;
+      let appName = '';
+      if (appConfig[appKey]) {
+        targetApp = appConfig[appKey];
+        appName = appKey;
+      } else {
+        const appNames = Object.keys(appConfig);
+        for (const name of appNames) {
+          if (appConfig[name].bundleNames.includes(appKey)) {
+            targetApp = appConfig[name];
+            appName = name;
+            break;
+          }
+        }
+      }
+
+      if (!targetApp) {
+        promptAction.showToast({ message: `æœªçŸ¥åº”ç”¨ï¼š${appKey}` });
+        return;
+      }
+
+      let usableBundleName = '';
+      for (const bundle of targetApp.bundleNames) {
+        try {
+          await bundleManager.getBundleInfo(bundle, BUNDLE_INFO_FLAG);
+          usableBundleName = bundle;
+          break;
+        } catch (err) {
+          continue;
+        }
+      }
+
+      if (!usableBundleName) {
+        promptAction.showToast({ message: `${appName}æœªå®‰è£…` });
+        return;
+      }
+
+      const want: Want = {
+        bundleName: usableBundleName,
+        abilityName: '',
+        action: 'ohos.want.action.startAbility'
+      };
+      await this.context.startAbility(want); // ç›´æ¥ç”¨å·²å®šä¹‰çš„contextï¼Œé¿å…é‡å¤è·å–
+      promptAction.showToast({ message: `å¯åŠ¨${appName}æˆåŠŸ` });
+    } catch (error) {
+      const err = error as Error;
+      if (err.message.includes('permission')) {
+        promptAction.showToast({ message: `æ— æ³•è‡ªåŠ¨å¯åŠ¨${appKey}ï¼Œè¯·æ‰‹åŠ¨æ‰“å¼€` });
+      } else {
+        promptAction.showToast({ message: `å¯åŠ¨${appKey}å¤±è´¥` });
+      }
+      console.error(`å¯åŠ¨åº”ç”¨å¤±è´¥ï¼š${appKey}ï¼Œé”™è¯¯ï¼š${err.message}`);
+    }
+  }
+  // ========== æ–‡ä»¶é€‰æ‹©å™¨ï¼ˆä¿®å¤å‚æ•°é”™è¯¯ï¼šStageæ¨¡å¼ç”¨supportedMimeTypesï¼‰ ==========
+  private async openFilePicker(): Promise<void> {
+    try {
+      const documentSelectOptions = new picker.DocumentSelectOptions();
+      documentSelectOptions.maxSelectNumber = 10;
+      // ä¿®å¤ï¼šStageæ¨¡å¼æ­£ç¡®çš„æ–‡ä»¶ç±»å‹è¿‡æ»¤å‚æ•°ï¼ˆæ›¿ä»£fileSuffixFiltersï¼‰
+      // ç§»é™¤ä¸æ”¯æŒçš„å±æ€§ï¼Œä½¿ç”¨é»˜è®¤é…ç½®
+
+      const filePicker = new picker.DocumentViewPicker();
+      const result = await filePicker.select(documentSelectOptions);
+
+      if (result.length > 0) {
+        promptAction.showToast({ message: `å·²é€‰æ‹© ${result.length} ä¸ªæ–‡ä»¶` });
+        console.log('é€‰æ‹©çš„æ–‡ä»¶è·¯å¾„ï¼š', result);
+      }
+    } catch (err) {
+      console.error('æ‰“å¼€æ–‡ä»¶é€‰æ‹©å™¨å¤±è´¥ï¼š', (err as Error).message);
+      promptAction.showToast({ message: 'è¯·æ‰‹åŠ¨æ‰“å¼€æ–‡ä»¶ç®¡ç†' });
+    }
+  }
+
+  // ========== åˆ†å¸ƒå¼äº’è”é€»è¾‘ï¼ˆæ–°å¢ï¼šå…ˆç”³è¯·æƒé™å†åˆå§‹åŒ–ï¼‰ ==========
+  async aboutToAppear() {
+    // ç¬¬ä¸€æ­¥ï¼šå…ˆç”³è¯·åº”ç”¨åˆ—è¡¨æƒé™ï¼ˆè§£å†³æœç´¢æƒé™é—®é¢˜ï¼‰
+    await this.requestBundleListPermission();
+
+    // ç¬¬äºŒæ­¥ï¼šåŸæœ‰åˆ†å¸ƒå¼äº’è”åˆå§‹åŒ–é€»è¾‘
+    try {
+      this.continuationToken = await continuationManager.registerContinuation();
+      console.info(`è·¨ç«¯æ¥ç»­æ³¨å†ŒæˆåŠŸï¼Œtokenï¼š${this.continuationToken}`);
+
+      continuationManager.on(
+        'deviceSelected',
+        this.continuationToken,
+        (deviceList) => {
+          if (deviceList && deviceList.length > 0) {
+            const selectedDevice = deviceList[0];
+            this.onlineDevices.push({
+              deviceId: selectedDevice.id,
+              deviceName: selectedDevice.name || selectedDevice.type || 'æœªçŸ¥è®¾å¤‡',
+              deviceType: selectedDevice.type
+            });
+            promptAction.showToast({
+              message: `é€‰æ‹©è®¾å¤‡ï¼š${selectedDevice.type || 'æœªçŸ¥è®¾å¤‡'}`
+            });
+          }
+        }
+      );
+    } catch (error) {
+      console.error(`è·¨ç«¯æ¥ç»­åˆå§‹åŒ–å¤±è´¥ï¼š${(error as Error).message}`);
+      promptAction.showToast({ message: 'è·¨ç«¯åŠŸèƒ½åˆå§‹åŒ–å¤±è´¥' });
+    }
+  }
+
+  aboutToDisappear() {
+    if (this.continuationToken > 0) {
+      continuationManager.unregisterContinuation(this.continuationToken)
+        .then(() => console.info('è·¨ç«¯æ¥ç»­æ³¨é”€æˆåŠŸ'))
+        .catch((err: Error) => console.error(`æ³¨é”€å¤±è´¥ï¼š${err.message}`));
+    }
+  }
+
+  private async crossDeviceContinue() {
+    if (this.continuationToken === 0) {
+      promptAction.showToast({ message: 'è·¨ç«¯æ¥ç»­æœªæ³¨å†Œ' });
+      return;
+    }
+
+    try {
+      await continuationManager.startContinuationDeviceManager(this.continuationToken);
+      promptAction.showToast({ message: 'æ‰“å¼€åˆ†å¸ƒå¼è®¾å¤‡åˆ—è¡¨' });
+    } catch (error) {
+      console.error(`å¯åŠ¨è®¾å¤‡ç®¡ç†å¤±è´¥ï¼š${(error as Error).message}`);
+      promptAction.showToast({ message: `å¤±è´¥ï¼š${(error as Error).message.slice(0, 20)}` });
+    }
+  }
+
+  private multiScreenCollaboration() {
+    this.crossDeviceContinue();
+    promptAction.showToast({ message: 'å¯åŠ¨å¤šå±ååŒè®¾å¤‡é€‰æ‹©' });
+  }
+  // ========== å…³é”®ï¼šæš´éœ²æ–¹æ³•ç»™çˆ¶ç»„ä»¶ Index è°ƒç”¨ï¼ˆå¿…é¡»æ˜¾å¼å£°æ˜publicï¼‰ ==========
+  // æ³¨é‡Šæ‰é‡å¤å®šä¹‰ï¼Œä½¿ç”¨åŸæœ‰çš„æ–¹æ³•å®šä¹‰
+  // public searchApp = this.searchApp;
+  // public launchApp = this.launchApp;
+
+  build() {
+    Column() {
+      Divider()
+        .width('100%')
+        .height(0.5)
+        .color('#e5e7eb')
+
+      Row() {
+        ForEach(this.appList, (item: AppItem) => {
+          Column({ space: 4 }) {
+            Text(item.icon).fontSize(24)
+            Text(item.name).fontSize(12).fontColor('#333')
+          }
+          .onClick(() => {
+            item.action()
+          })
+          .width(60)
+          .alignItems(HorizontalAlign.Center)
+        })
+      }
+      .justifyContent(FlexAlign.SpaceAround)
+      .alignItems(VerticalAlign.Center)
+      .width('100%')
+      .height(80)
+      .backgroundColor('#f8f9fa')
+      .padding({ left: 10, right: 10 })
+    }
+  }
+}ÀÔrE•²@ohos.promptActionÙ&@ohos.continuation.continuationManagerº@ohos.bundle.bundleManager±@ohos.file.picker·@ohos.abilityAccessCtrlÔrF—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙ` hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsAÃªoh-resolveÂFAÃÙt hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.continuation.continuationManager.d.tsÔrG‘¯hostModulesInfo‘CÙ&@ohos.continuation.continuationManager¥entryÃªoh-resolveÂFAÃÙh hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.bundle.bundleManager.d.tsG‘Cº@ohos.bundle.bundleManager¥entryÃªoh-resolveÂFAÃÙ_ hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.file.picker.d.tsG‘C±@ohos.file.picker¥entryÃªoh-resolveÂFAÃÙe hvigor_ignore_E:_Software_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.abilityAccessCtrl.d.tsG‘C·@ohos.abilityAccessCtrl¥entryÃªoh-resolveÂ“ÔrH–§version¤fileªsourceRoot§sources¥names¨mappingsªDockBar.js ‘«DockBar.etsÜ#–”    ”  ”  ”  ”-  -”.  .–”   ” ” ”   ”ÌH ÌH”ÌI ÌI–”   ” ” ” ”6 6”7 7–”   ” ” ” ”& &”' '’”   ” –”   ” ” ” ”7 7”8 8’”   ” ””   ” ” ” ’”  ”  ’” !” !’” "” "’” #” #’”  % ”$ %$š”  & ” &” &” &”& &&”' &'”1 &1”2 &2”ÌI &ÌI”ÌJ &ÌJ–”  . ” .” .” .” .” .‘” - •” 2-”! 27”" 28”& 2<”' 2ÌX’”! 3&”" 3'•” 53”* 5ÌD”+ 5ÌE”: 5ÌT”< 5ÌV‘” 7$Ü ” 8” 8” 8
+” 8” 8” 8” 8”  8”$ 8”& 8”, 8$”. 8&”1 88”3 8:”4 8;”8 8?”9 8Ì@”ÌB 8ÌI”ÌC 8ÌJ”ÌG 8ÌN”ÌH 8ÌO”ÌJ 8ÌQÜ ” 9” 9” 9
+” 9” 9” 9” 9”  9”$ 9”& 9”, 9$”. 9&”1 98”3 9:”4 9;”8 9?”9 9Ì@”ÌB 9ÌI”ÌC 9ÌJ”ÌU 9Ì\”ÌV 9Ì]”ÌX 9Ì_Ü ” :” :” :
+” :” :” :” :”  :”% :”' :”- :%”/ :'”2 :9”4 :;”5 :<”9 :Ì@”: :ÌA”ÌC :ÌJ”ÌD :ÌK”ÌI :ÌP”ÌJ :ÌQ”ÌL :ÌSÜ ” ;” ;” ;
+” ;” ;” ;” ;”  ;”& ;”( ; ”. ;&”0 ;(”3 ;:”5 ;<”6 ;=”: ;ÌA”; ;ÌB”ÌI ;ÌP”ÌK ;ÌR”ÌM ;ÌU‘”	 <‘” +’” /” /’” /” /’” 0” 0’” 0” 0’” =”% =#”” >
+”	 >”
+ >”% >+’” ?” ?’” Ì@”' Ì@!œ” ÌA” ÌA” ÌA”" ÌA”# ÌA”% ÌA”, ÌA&”. ÌA(”9 ÌA3”; ÌA5”< ÌA6”= ÌA7”” ÌB” ÌB” ÌB” ÌB‘”	 ÌC”” ÌC” ÌC” ÌC” ÌCœ” ÌD” ÌD” ÌD” ÌD” ÌD”$ ÌD”) ÌD.”* ÌD/”1 ÌD6”3 ÌD8”4 ÌD9”5 ÌD:”” ÌE” ÌE” ÌE” ÌE‘”	 ÌF’” ÌG” ÌG’” ÌH”% ÌH#–” ÌI”	 ÌI”
+ ÌI” ÌI” ÌI” ÌI!’” ÌJ” ÌJ’” ÌK”& ÌK œ” ÌL” ÌL” ÌL”! ÌL”( ÌL"”) ÌL#”4 ÌL.”6 ÌL0”7 ÌL1”; ÌL5”= ÌL7”> ÌL8”” ÌM” ÌM
+” ÌM” ÌM”” ÌM” ÌM ” ÌM"” ÌM#š” ÌO” ÌO” ÌO” ÌO” ÌO”% ÌO”1 ÌO+”4 ÌO.”5 ÌO/”6 ÌO0–” ÌP” ÌP” ÌP” ÌP” ÌP”) ÌP#‘”	 ÌQ”” ÌQ” ÌQ” ÌQ” ÌQ–” ÌR” ÌR” ÌR” ÌR” ÌR ” ÌR!œ” ÌS” ÌS” ÌS” ÌS” ÌS”$ ÌS”) ÌS#”* ÌS$”1 ÌS+”3 ÌS-”4 ÌS.”5 ÌS/”” ÌT” ÌT” ÌT” ÌT‘”	 ÌU’” ÌV” ÌV’” ÌX”) ÌX'–” ÌY”	 ÌY”
+ ÌY” ÌY” ÌY” ÌY ’” ÌZ” ÌZ”” Ì[” Ì[” Ì[” Ì[7š” Ì\” Ì\” Ì\” Ì\”# Ì\”% Ì\”& Ì\”9 Ì\1”: Ì\2”< Ì\4˜” Ì]” Ì]” Ì]” Ì]”# Ì]”% Ì]”4 Ì],”6 Ì].š” Ì^” Ì^” Ì^” Ì^”$ Ì^”& Ì^”' Ì^”: Ì^2”; Ì^3”= Ì^5œ” Ì_” Ì_” Ì_” Ì_”% Ì_”' Ì_”( Ì_ ”> Ì_6”Ì@ Ì_8”ÌX Ì_ÌP”ÌY Ì_ÌQ”Ì[ Ì_ÌS’” Ì`” Ì`–” Ìb” Ìb
+” Ìb” Ìb,”  Ìb0”! Ìb1–” Ìc” Ìc
+” Ìc” Ìc” Ìc” Ìc—” Ìd” Ìd
+” Ìd” Ìd”  Ìd”! Ìd”# Ìd˜” Ìe” Ìe” Ìe”% Ìe”& Ìe”, Ìe$”- Ìe%”. Ìe&•” Ìf” Ìf” Ìf”  Ìf”! Ìf‘” Ìg‘” Ìg›” Ìh” Ìh” Ìh”! Ìh”' Ìh”( Ìh ”, Ìh$”- Ìh%”6 Ìh.”7 Ìh/”8 Ìh0—” Ìi” Ìi” Ìi” Ìi”# Ìi”+ Ìi#”- Ìi%” Ìj
+” Ìj”! Ìj”" Ìj”& Ìj”' Ìj”( Ìj”3 Ìj)”4 Ìj*”< Ìj2”= Ìj3”ÌC Ìj9”ÌD Ìj:”ÌF Ìj<˜” Ìk”! Ìk”$ Ìk”- Ìk!”. Ìk"”2 Ìk&”3 Ìk'”4 Ìk(•” Ìl” Ìl”" Ìl”& Ìl”' Ìl’” Ìm” Ìm‘” Ìn‘” Ìo	‘” Ìp•” Ìr” Ìr
+” Ìr” Ìr” Ìr” Ìs” Ìs” Ìs”& Ìs”' Ìs”) Ìs!”0 Ìs(”2 Ìs*”: Ìs2”Ì@ Ìs8”ÌB Ìs:”ÌD Ìs<”ÌE Ìs=”ÌF Ìs>’” Ìt” Ìt‘” Ìu–” Ìw” Ìw
+”  Ìw”# Ìw”% Ìw”& Ìw ™” Ìx” Ìx” Ìx” Ìx”! Ìx”* Ìx$”+ Ìx%”6 Ìx0”8 Ìx2’” Ìy” Ìy›” Ìz
+” Ìz”' Ìz”( Ìz”5 Ìz+”6 Ìz,”< Ìz2”> Ìz4”ÌN ÌzÌD”ÌO ÌzÌE”ÌP ÌzÌF•” Ì{
+”$ Ì{”' Ì{”- Ì{#”. Ì{$’” Ì|
+” Ì|‘” Ì}	”” Ì}
+” Ì}” Ì}” Ì}’” Ì~
+” Ì~‘” Ì	‘” Ì€•” Ì‚” Ì‚
+” Ì‚”! Ì‚”# Ì‚” Ìƒ” Ìƒ” Ìƒ”& Ìƒ”' Ìƒ”) Ìƒ!”0 Ìƒ(”2 Ìƒ*”5 Ìƒ-”< Ìƒ4”ÌA Ìƒ9”ÌC Ìƒ;”ÌD Ìƒ<”ÌE Ìƒ=’” Ì„” Ì„‘” Ì…”” Ì‡” Ì‡” Ì‡” Ì‡”” Ìˆ” Ìˆ” Ìˆ”, Ìˆ$”” Ì‰” Ì‰” Ì‰” Ì‰”” ÌŠ” ÌŠ” ÌŠ”7 ÌŠ/’” Ì‹” Ì‹” ÌŒ” ÌŒ” ÌŒ” ÌŒ” ÌŒ” ÌŒ”+ ÌŒ%”, ÌŒ&”0 ÌŒ*”1 ÌŒ+”2 ÌŒ,”3 ÌŒ-”ÌK ÌŒÌE” Ì” Ì” Ì”" Ì”# Ì”% Ì”, Ì&”. Ì(”3 Ì-”: Ì4”> Ì8”Ì@ Ì:”ÌA Ì;”ÌB Ì<‘”	 Ì”” Ì” Ì” Ì” Ì–” Ì” Ì” Ì” Ì” Ì ” Ì!›” Ì” Ì
+” Ì” Ì” Ì” Ì”$ Ì”% Ì”1 Ì+”2 Ì,”4 Ì.” Ì‘” Ì‘” Ì‘”& Ì‘”' Ì‘”) Ì‘!”0 Ì‘(”2 Ì‘*”; Ì‘3”ÌA Ì‘9”ÌI Ì‘ÌA”ÌK Ì‘ÌC”ÌL Ì‘ÌD”ÌM Ì‘ÌE‘” Ì’‘” Ì’” Ì“” Ì“” Ì“”& Ì“”' Ì“”) Ì“!”0 Ì“(”2 Ì“*”7 Ì“/”= Ì“5”ÌA Ì“9”ÌC Ì“;”ÌD Ì“<”ÌE Ì“=‘” Ì”” Ì•” Ì•” Ì•” Ì•” Ì•”$ Ì•”* Ì•$”1 Ì•+”4 Ì•.”5 Ì•/”< Ì•6”> Ì•8”? Ì•9”Ì@ Ì•:‘”	 Ì–’” Ì—” Ì—’” Ì˜”ÌE Ì˜ÌC”” Ì™
+”	 Ì™”
+ Ì™” Ì™’” Ìš” Ìšš” Ì›” Ì›”' Ì›!”* Ì›$”. Ì›(”4 Ì›.”5 Ì›/”ÌJ Ì›ÌD”ÌL Ì›ÌF”ÌM Ì›ÌG—” Ìœ”! Ìœ”" Ìœ”1 Ìœ+”4 Ìœ.”6 Ìœ0”7 Ìœ1’” Ì”9 Ì3’” Ì” Ìš” Ì ” Ì ” Ì ” Ì ”# Ì ”) Ì #”* Ì $”< Ì 6”> Ì 8”? Ì 9œ” Ì¡” Ì¡” Ì¡” Ì¡”! Ì¡”+ Ì¡%”, Ì¡&”2 Ì¡,”3 Ì¡-”ÌH Ì¡ÌB”ÌI Ì¡ÌC”ÌJ Ì¡ÌD˜” Ì£” Ì£
+” Ì£” Ì£” Ì£”  Ì£”! Ì£”# Ì£Ü ” Ì¤” Ì¤” Ì¤”& Ì¤”' Ì¤”) Ì¤!”0 Ì¤(”2 Ì¤*”9 Ì¤1”? Ì¤7”Ì@ Ì¤8”ÌF Ì¤>”ÌL Ì¤ÌD”ÌN Ì¤ÌF”ÌO Ì¤ÌG”ÌP Ì¤ÌHš” Ì¥” Ì¥” Ì¥” Ì¥” Ì¥”& Ì¥”( Ì¥ ”. Ì¥&”/ Ì¥'”0 Ì¥(‘” Ì¦‘”	 Ì§”” Ì§” Ì§” Ì§” Ì§œ” Ì¨” Ì¨” Ì¨” Ì¨” Ì¨”& Ì¨ ”( Ì¨#”+ Ì¨0”, Ì¨1”3 Ì¨8”4 Ì¨9”5 Ì¨:œ” Ì©” Ì©” Ì©”" Ì©”# Ì©”% Ì©”, Ì©&”. Ì©(”9 Ì©3”; Ì©5”< Ì©6”= Ì©7‘”	 Ìª’” Ì«” Ì«’” Ì­”2 Ì­0”” Ì®”	 Ì®”
+ Ì®” Ì®’” Ì¯”" Ì¯—” Ì°” Ì°
+” Ì°” Ì°”. Ì°*”0 Ì°,”1 Ì°-’” Ì²” Ì²’” Ì³” Ì³›” Ì´” Ì´
+” Ì´”" Ì´”% Ì´”+ Ì´%”> Ì´8”? Ì´9”ÌS Ì´ÌM”ÌU Ì´ÌO”ÌV Ì´ÌPœ” Ìµ” Ìµ” Ìµ” Ìµ” Ìµ”+ Ìµ%”/ Ìµ)”0 Ìµ*”ÌA Ìµ;”ÌC Ìµ=”ÌD Ìµ>”ÌE Ìµ?Ÿ” Ì·” Ì·”  Ì·”" Ì·”# Ì¸”3 Ì¸”5 Ì¹”9 Ì¹”: Ì¹”ÌK Ì¹”ÌM Ìº”ÌN Ìº	”ÌX Ìº”ÌZ Ìº”Ì\ Ìºš” Ì»
+” Ì»” Ì»”" Ì»”, Ì»&”- Ì»'”3 Ì»-”6 Ì»0”7 Ì»1”9 Ì»3™” Ì¼” Ì¼”( Ì¼ ”+ Ì¼#”5 Ì¼-”6 Ì¼.”7 Ì¼/”8 Ì¼0”9 Ì¼1—” Ì½” Ì½” Ì½”& Ì½”' Ì½”+ Ì½#”, Ì½$–” Ì¾”  Ì¾”" Ì¾”0 Ì¾&”1 Ì¾'”3 Ì¾)œ” Ì¿”" Ì¿”$ Ì¿”2 Ì¿(”3 Ì¿)”7 Ì¿-”; Ì¿1”ÌI Ì¿?”ÌJ Ì¿Ì@”ÌN Ì¿ÌD”ÌR Ì¿ÌH”ÌX Ì¿ÌN–” ÌÀ”" ÌÀ”$ ÌÀ”2 ÌÀ(”3 ÌÀ)”7 ÌÀ-“” ÌÁ” ÌÁ” ÌÁ•” ÌÂ”  ÌÂ”! ÌÂ”* ÌÂ"”+ ÌÂ#š” ÌÃ” ÌÃ”! ÌÃ”) ÌÃ”7 ÌÃ-”8 ÌÃ.”< ÌÃ2”Ì@ ÌÃ6”ÌF ÌÃ<”ÌH ÌÃ>“” ÌÄ” ÌÄ” ÌÄ‘” ÌÅ”” ÌÆ” ÌÆ	” ÌÇ” ÌÇ‘”	 ÌÈ”” ÌÈ” ÌÈ” ÌÈ” ÌÈœ” ÌÉ” ÌÉ” ÌÉ” ÌÉ” ÌÉ”' ÌÉ"”, ÌÉ1”- ÌÉ2”4 ÌÉ9”6 ÌÉ;”7 ÌÉ<”8 ÌÉ=œ” ÌÊ” ÌÊ” ÌÊ”" ÌÊ”# ÌÊ”% ÌÊ”, ÌÊ&”. ÌÊ(”9 ÌÊ3”; ÌÊ5”< ÌÊ6”= ÌÊ7‘”	 ÌË’” ÌÌ” ÌÌ’” ÌÎ” ÌÎ˜” ÌÏ” ÌÏ” ÌÏ” ÌÏ”" ÌÏ”% ÌÏ!”& ÌÏ"”( ÌÏ$™” ÌĞ” ÌĞ”  ÌĞ”6 ÌĞ0”7 ÌĞ1”; ÌĞ5”< ÌĞ6”ÌM ÌĞÌG”ÌN ÌĞÌH” ÌÑ	” ÌÑ” ÌÑ” ÌÑ” ÌÑ” ÌÑ”# ÌÑ”$ ÌÑ”( ÌÑ ”) ÌÑ!”3 ÌÑ+”4 ÌÑ,”5 ÌÑ-Ü ” ÌÒ	” ÌÒ” ÌÒ” ÌÒ” ÌÒ” ÌÒ” ÌÒ”  ÌÒ”' ÌÒ&”( ÌÒ'”- ÌÒ,”. ÌÒ-”6 ÌÒ5”9 ÌÒ8”: ÌÒ9”ÌA ÌÒÌ@”ÌC ÌÒÌB”ÌD ÌÒÌC”ÌE ÌÒÌD”ÌF ÌÒÌE‘”	 ÌÓ’” ÌÔ” ÌÔ”” ÌÖ
+”	 ÌÖ”
+ ÌÖ” ÌÖ#˜” Ì×” Ì×” Ì×” Ì×”" Ì×”' Ì×#”( Ì×$”* Ì×&œ” ÌØ” ÌØ” ÌØ”" ÌØ”# ÌØ”% ÌØ”, ÌØ&”. ÌØ(”7 ÌØ1”9 ÌØ3”: ÌØ4”; ÌØ5’” ÌÙ” ÌÙ‘”	 ÌÚ’” ÌÜ” ÌÜ›” Ìİ” Ìİ”% Ìİ”& Ìİ ”ÌD Ìİ>”ÌE Ìİ?”ÌI ÌİÌC”ÌJ ÌİÌD”Ì[ ÌİÌU”Ì\ ÌİÌV”Ì] ÌİÌWœ” ÌŞ” ÌŞ” ÌŞ”" ÌŞ”# ÌŞ”% ÌŞ”, ÌŞ&”. ÌŞ(”9 ÌŞ3”; ÌŞ5”< ÌŞ6”= ÌŞ7‘”	 Ìß”” Ìß” Ìß” Ìß” Ìßœ” Ìà” Ìà” Ìà” Ìà” Ìà”& Ìà!”+ Ìà0”, Ìà1”3 Ìà8”5 Ìà:”6 Ìà;”7 Ìà<Ü ” Ìá” Ìá” Ìá”" Ìá”# Ìá”% Ìá”, Ìá&”. Ìá(”4 Ìá/”9 Ìá>”: Ìá?”ÌA ÌáÌF”ÌB ÌáÌG”ÌG ÌáÌL”ÌH ÌáÌM”ÌI ÌáÌN”ÌK ÌáÌP”ÌM ÌáÌR”ÌN ÌáÌS”ÌP ÌáÌU”ÌR ÌáÌW”ÌS ÌáÌX”ÌT ÌáÌY‘”	 Ìâ’” Ìã” Ìã’” Ìå
+” Ìå"–” Ìæ” Ìæ” Ìæ	”  Ìæ”" Ìæ”# Ìæœ” Ìç” Ìç” Ìç” Ìç” Ìç”! Ìç”( Ìç$”* Ìç&”6 Ìç2”8 Ìç4”9 Ìç5”: Ìç6’” Ìè” Ìè’” Ìé”? Ìé=’” Ìê” Ìê’” Ìë”) Ìë'’” Ìì”) Ìì'‘” Ìî’” Ìï” Ìï
+’” Ìğ” Ìğ–” Ìğ” Ìğ” Ìñ	” Ìñ” Ìñ”  Ìñ–” Ìğ” Ìğ” Ìò	” Ìò” Ìò” Ìò–” Ìğ” Ìğ” Ìó	” Ìó” Ìó”# Ìó’” Ìõ” Ìõ	˜” Ìõ” Ìõ	” Í” Í” Í”( Í”) Í ”4 Í+˜” Ìõ” Ìõ	” Í” Í” Í”( Í”) Í ”/ Í&–” Ìõ” Ìõ	” Í” Í” Í” Í–” Ìõ” Ìõ	” Í” Í” Í” Í–” Ìõ” Ìõ	” Í” Í”  Í”) Í ” Ìõ” Ìõ	” Í” Í” Í” Í” Í”  Í”" Í”$ Í”) Í ”+ Í"”- Í$”/ Í&’” Ìö” Ìö˜” Ì÷
+” Ì÷”" Ì÷”$ Ì÷”) Ì÷”+ Ì÷”, Ì÷”. Ì÷—” Ì÷
+” Ì÷” Ìû”" Ìû”# Ìû”& Ìû”( Ìû–” Ìü” Ìü” Ìü”# Ìü”% Ìü”& Ìü’” Ìı
+” Ìı–” Ì÷
+” Ì÷” Ìş”  Ìş”! Ìş”# Ìş˜” Ì÷
+” Ì÷” Ìÿ”% Ìÿ”& Ìÿ”5 Ìÿ%”6 Ìÿ&”< Ìÿ,–” Ìø” Ìø”  Ìø”$ Ìø”% Ìø”) Ìø–” Ìø” Ìø” Ìø”! Ìø$”" Ìø%”$ Ìø'’” Ìø” Ìø–” Ìù” Ìù”  Ìù”$ Ìù”% Ìù”) Ìù–” Ìù” Ìù” Ìù”! Ìù$”" Ìù%”$ Ìù'–” Ìù” Ìù” Ìù)”" Ìù2”# Ìù3”) Ìù9’” Ìù” Ìù’” Ì÷
+” Ì÷””/ Ìö”3 Ìö”4 Ìö”; Ìö’” Ìö” Ìö’” Ìõ” Ìõ	’” Ìï” Ìï
+‘” Í	ÔrI–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜ(‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
+ ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ì ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌĞ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  Ìİ ‘”  ÌŞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìğ ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìı ‘”  Ìş ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
+ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ÔrJ’§missing¦pluginÃ¦genAbcÂÔ  ÔrK”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache•ÔrL•¤type¥start£endªspecifiers¦source±ImportDeclarationÌ€Ì®‘ÔrM”¤type¥start£end¥local¶ImportDefaultSpecifierÌ‡Ì“ÔrN”¤type¥start£end¤nameªIdentifierÌ‡Ì“¬promptActionÔrO•¤type¥start£end¥value£raw§LiteralÌ™Ì­²@ohos.promptAction´'@ohos.promptAction'L±ImportDeclarationÌ°Ìù‘M¶ImportDefaultSpecifierÌ·ÌÊNªIdentifierÌ·ÌÊ³continuationManagerO§LiteralÌĞÌøÙ&@ohos.continuation.continuationManagerÙ('@ohos.continuation.continuationManager'L±ImportDeclarationÌûÍ2‘M¶ImportDefaultSpecifierÍÍNªIdentifierÍÍ­bundleManagerO§LiteralÍÍ1º@ohos.bundle.bundleManager¼'@ohos.bundle.bundleManager'L±ImportDeclarationÍ4Í[‘M¶ImportDefaultSpecifierÍ;ÍANªIdentifierÍ;ÍA¦pickerO§LiteralÍGÍZ±@ohos.file.picker³'@ohos.file.picker'L±ImportDeclarationÍoÍ§‘M¶ImportDefaultSpecifierÍvÍ‡NªIdentifierÍvÍ‡±abilityAccessCtrlO§LiteralÍÍ¦·@ohos.abilityAccessCtrl¹'@ohos.abilityAccessCtrl'

@@ -1,0 +1,27 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "label"
+    },
+    {
+      "name": "permission_get_bundle_info",
+      "value": "获取应用信息以检查文件管理等应用是否安装"
+    },
+    {
+      "name": "permission_start_ability",
+      "value": "需要启动应用的权限以打开文件管理、设置等应用"
+    },{
+      "name": "perm_reason",
+      "value": "需要启动应用的权限"
+    }
+  ]
+}
